@@ -89,6 +89,12 @@ class NowPlayingManager: VideoPlayerObserverDelegate {
 
       if player.rate == 0.0 {
         player.play()
+
+        for player in players.allObjects {
+          let newIsPlaying = true
+          let oldIsPlaying = false
+          player.safeEmit(event: "playingChange", arguments: newIsPlaying, oldIsPlaying)
+        }
       }
       return .success
     }
@@ -100,6 +106,10 @@ class NowPlayingManager: VideoPlayerObserverDelegate {
 
       for player in players.allObjects {
         player.pointer.pause()
+
+        let newIsPlaying = false
+        let oldIsPlaying = true
+        player.safeEmit(event: "playingChange", arguments: newIsPlaying, oldIsPlaying)
       }
       return .success
     }

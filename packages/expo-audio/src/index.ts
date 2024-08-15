@@ -33,16 +33,25 @@ export function useAudioPlayerStatus(player: AudioPlayer): AudioStatus {
   return useEvent(player, 'onPlaybackStatusUpdate', currentStatus);
 }
 
+export function useAudioSampleListener(
+  player: AudioPlayer,
+  listener: (data: { channels: { frames: number[] }[]; timestamp: number }) => void
+) {
+  player.setAudioSamplingEnabled(true);
+  useEffect(() => {
+    const subscription = player.addListener('onAudioSampleUpdate', listener);
+    return () => subscription.remove();
+  }, [player.id]);
+}
+
 export function useAudioRecorder(
   options: RecordingOptions,
   statusListener?: (status: RecordingStatus) => void
-): [AudioRecorder, RecorderState] {
+): AudioRecorder {
   const platformOptions = createRecordingOptions(options);
   const recorder = useReleasingSharedObject(() => {
     return new AudioModule.AudioRecorder(platformOptions);
   }, [JSON.stringify(platformOptions)]);
-
-  const [state, setState] = useState<RecorderState>(recorder.getStatus());
 
   useEffect(() => {
     const subscription = recorder.addListener('onRecordingStatusUpdate', (status) => {
@@ -51,16 +60,21 @@ export function useAudioRecorder(
     return () => subscription.remove();
   }, [recorder.id]);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const status = recorder.getStatus();
-      setState(status);
-    }, 1000);
+  return recorder;
+}
 
-    return () => clearInterval(interval);
+export function useAudioRecorderState(recorder: AudioRecorder, interval: number = 1000) {
+  const [state, setState] = useState<RecorderState>(recorder.getStatus());
+
+  useEffect(() => {
+    const int = setInterval(() => {
+      setState(recorder.getStatus());
+    }, interval);
+
+    return () => clearInterval(int);
   }, [recorder.id]);
 
-  return [recorder, state];
+  return state;
 }
 
 export async function setIsAudioActiveAsync(active: boolean): Promise<void> {
